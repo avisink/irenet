@@ -1,6 +1,6 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
 const db = require('./config/database');
 
 const app = express();
@@ -138,7 +138,7 @@ app.get('/api/health', async (req, res) => {
   });
   
   // Create donation
-  app.post('/api/donations', async (req, res) => {
+  app.post('/api/dona3tions', async (req, res) => {
     try {
       const { donor_id, item_name, category, quantity, status } = req.body;
       if (!donor_id || !item_name || !category || !quantity) {
