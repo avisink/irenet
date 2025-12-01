@@ -171,6 +171,36 @@ export const smartApi = {
       throw error;
     }
   },
+
+  async createRequest(data: {
+    orgId: number;
+    itemName: string;
+    category: string;
+    quantity: number;
+    description?: string;
+    urgency?: string;
+  }) {
+    try {
+      console.log('✍️ Creating request in MySQL...');
+      const result = await backendApi.createRequest(data);
+      console.log('✅ Request created (MySQL auto-synced to Supabase)');
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to create request:', error);
+      throw error;
+    }
+  },
+
+  async deleteRequest(id: number) {
+    try {
+      console.log('🗑️ Deleting request from MySQL...');
+      await backendApi.deleteRequest(id);
+      console.log('✅ Request deleted (removed from both DBs)');
+    } catch (error) {
+      console.error('❌ Failed to delete request:', error);
+      throw error;
+    }
+  },
   
   // ============================================
   // MATCHES
@@ -184,6 +214,21 @@ export const smartApi = {
       return data;
     } catch (error) {
       console.error('❌ Failed to fetch matches:', error);
+      throw error;
+    }
+  },
+
+  async acceptRequest(data: {
+    donorId: number;
+    requestId: number;
+  }) {
+    try {
+      console.log('✍️ Accepting request and creating match in MySQL...');
+      const result = await backendApi.acceptRequest(data);
+      console.log('✅ Request accepted (MySQL auto-synced to Supabase)');
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to accept request:', error);
       throw error;
     }
   },

@@ -64,7 +64,11 @@ export function DonorMatchesPage() {
               {matches.map((match) => (
                 <div
                   key={match.match_id}
-                  className="p-4 border rounded-lg bg-gradient-to-r from-green-50 to-blue-50"
+                  className={`p-4 border rounded-lg ${
+                    match.status === 'completed'
+                      ? 'bg-gradient-to-r from-green-100 to-emerald-100'
+                      : 'bg-gradient-to-r from-green-50 to-blue-50'
+                  }`}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -73,12 +77,12 @@ export function DonorMatchesPage() {
                     </div>
                     <Badge
                       className={
-                        match.status === 'fulfilled'
-                          ? 'bg-purple-600'
-                          : 'bg-green-600'
+                        match.status === 'completed'
+                          ? 'bg-emerald-600'
+                          : 'bg-orange-500'
                       }
                     >
-                      {match.status === 'fulfilled' ? 'Delivered' : 'Matched'}
+                      {match.status === 'completed' ? 'Completed' : 'Pending Delivery'}
                     </Badge>
                   </div>
 
@@ -89,40 +93,49 @@ export function DonorMatchesPage() {
                         <p className="text-xs text-gray-500 font-medium">Your Donation:</p>
                       </div>
                       <p className="font-medium text-green-700">
-                        {match.donations_d9b92013?.item_name}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Category: {match.donations_d9b92013?.category}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Qty: {match.donations_d9b92013?.quantity}
+                        {match.donation_item}
                       </p>
                     </div>
 
                     <div className="bg-white p-3 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <Building className="size-4 text-blue-600" />
-                        <p className="text-xs text-gray-500 font-medium">Organization:</p>
+                        <p className="text-xs text-gray-500 font-medium">Deliver To:</p>
                       </div>
                       <p className="font-medium text-blue-700">
-                        {match.requests_d9b92013?.organizations_d9b92013?.org_name}
+                        {match.org_name}
                       </p>
-                      <p className="text-sm text-gray-600">
-                        Requested: {match.requests_d9b92013?.item_name}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Qty: {match.requests_d9b92013?.quantity}
-                      </p>
+                      {match.org_contact_info && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          {match.org_contact_info}
+                        </p>
+                      )}
+                      {match.request_item && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          They requested: {match.request_item}
+                        </p>
+                      )}
                     </div>
                   </div>
+
+                  {match.status !== 'completed' && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3">
+                      <p className="text-sm text-orange-800 font-medium">
+                        📦 Action Required: Please deliver this donation to the organization
+                      </p>
+                      <p className="text-xs text-orange-700 mt-1">
+                        Once delivered, the organization will mark it as received
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between pt-3 border-t">
                     <p className="text-xs text-gray-500">
                       Matched on: {new Date(match.match_date).toLocaleDateString()}
                     </p>
-                    {match.status === 'fulfilled' && (
-                      <p className="text-xs text-purple-600 font-medium">
-                        ✓ Delivered to organization
+                    {match.status === 'completed' && (
+                      <p className="text-xs text-emerald-600 font-medium">
+                        ✓ Delivered and received by organization
                       </p>
                     )}
                   </div>
@@ -135,3 +148,4 @@ export function DonorMatchesPage() {
     </div>
   );
 }
+

@@ -62,6 +62,14 @@ export interface Match {
   request_id: number;
   match_date: string;
   status?: string;
+  donation_item?: string;
+  request_item?: string;
+  donor_name?: string;
+  donor_email?: string;
+  org_name?: string;
+  org_contact_info?: string;
+  donation_status?: string;
+  request_status?: string;
   donations_d9b92013?: Donation;
   requests_d9b92013?: Request & { organizations_d9b92013?: { org_name: string } };
 }
@@ -279,35 +287,64 @@ class ApiClient {
     category: string;
     quantity: number;
   }): Promise<Request> {
-    const response = await fetch(`${API_BASE_URL}/requests`, {
-      method: 'POST',
-      headers: this.getHeaders(token),
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to create request');
+    // Get current user (organization)
+    const { data: { user } } = await supabase.auth.getUser(token);
+    if (!user) throw new Error('Unauthorized');
+    
+    // Get user details from MySQL
+    const users = await smartApi.getUserByEmail(user.email!);
+    if (!users || users.length === 0) {
+      throw new Error('User not found in database');
     }
-
-    return response.json();
+    
+    const userId = users[0].userId;
+    
+    // Get org_id from organizations table
+    const org = await smartApi.getOrganizationByUserId(userId);
+    if (!org) {
+      throw new Error('Organization not found. Please contact support.');
+    }
+    
+    // Create request via smartApi
+    const result = await smartApi.createRequest({
+      orgId: org.orgId,
+      itemName: data.item_name,
+      category: data.category,
+      quantity: data.quantity,
+    });
+    
+    // Convert to UI format (snake_case)
+    return {
+      request_id: result.requestId,
+      org_id: result.orgId,
+      item_name: result.itemName,
+      category: result.category,
+      quantity: result.quantity,
+      status: result.status,
+      created_at: result.createdAt,
+    };
   }
 
   async getRequests(status?: string): Promise<Request[]> {
-    const url = status
-      ? `${API_BASE_URL}/requests?status=${status}`
-      : `${API_BASE_URL}/requests`;
-
-    const response = await fetch(url, {
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch requests');
-    }
-
-    return response.json();
+    // Fetch requests from MySQL via smartApi
+    const requests = await smartApi.getRequests(status ? { status } : undefined);
+    
+    // Convert to UI format (snake_case)
+    return requests.map((r: any) => ({
+      request_id: r.requestId,
+      org_id: r.orgId,
+      item_name: r.itemName,
+      category: r.category,
+      quantity: r.quantity,
+      status: r.status,
+      description: r.description,
+      urgency: r.urgency,
+      created_at: r.createdAt,
+      organizations_d9b92013: r.orgName ? {
+        org_name: r.orgName,
+        contact_info: r.contactInfo,
+      } : undefined,
+    }));
   }
 
   async getMyRequests(token: string): Promise<Request[]> {
@@ -315,15 +352,38 @@ class ApiClient {
     const { data: { user } } = await supabase.auth.getUser(token);
     if (!user) throw new Error('Unauthorized');
     
-    // Get user's org_id from MySQL
+    // Get user details from MySQL
     const users = await smartApi.getUserByEmail(user.email!);
     if (!users || users.length === 0) {
       throw new Error('User not found in database');
     }
     
-    // For now, return empty array if not an organization
-    // TODO: Add organization lookup
-    return [];
+    const userId = users[0].userId;
+    
+    // Get org_id from organizations table
+    const org = await smartApi.getOrganizationByUserId(userId);
+    if (!org) {
+      throw new Error('Organization not found. Please contact support.');
+    }
+    
+    // Fetch ACTIVE requests for this organization (exclude fulfilled/cancelled)
+    const allRequests = await smartApi.getRequests({ orgId: org.orgId });
+    const activeRequests = allRequests.filter((r: any) => 
+      r.status === 'open' || r.status === 'matched'
+    );
+    
+    // Convert to UI format (snake_case)
+    return activeRequests.map((r: any) => ({
+      request_id: r.requestId,
+      org_id: r.orgId,
+      item_name: r.itemName,
+      category: r.category,
+      quantity: r.quantity,
+      status: r.status,
+      description: r.description,
+      urgency: r.urgency,
+      created_at: r.createdAt,
+    }));
   }
 
   async updateRequest(token: string, id: number, data: Partial<Request>): Promise<Request> {
@@ -342,15 +402,8 @@ class ApiClient {
   }
 
   async deleteRequest(token: string, id: number): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/requests/${id}`, {
-      method: 'DELETE',
-      headers: this.getHeaders(token),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to delete request');
-    }
+    // Delete request via smartApi (MySQL with Supabase sync)
+    await smartApi.deleteRequest(id);
   }
 
   // Matches
@@ -369,16 +422,67 @@ class ApiClient {
     const userRole = users[0].role;
     
     // Fetch matches based on role
-    const filters = userRole === 'donor' ? { donorId: userId } : { orgId: userId };
+    let filters;
+    if (userRole === 'donor') {
+      filters = { donorId: userId };
+    } else if (userRole === 'organization') {
+      // Get org_id from organizations table (not user_id!)
+      const org = await smartApi.getOrganizationByUserId(userId);
+      if (!org) {
+        throw new Error('Organization not found');
+      }
+      filters = { orgId: org.orgId };
+    } else {
+      filters = {}; // admin or other
+    }
+    
     const matches = await smartApi.getMatches(filters);
     
-    // Convert to UI format (snake_case)
+    // Convert to UI format (snake_case) with all details
     return matches.map((m: any) => ({
       match_id: m.matchId,
       donation_id: m.donationId,
       request_id: m.requestId,
       match_date: m.matchDate,
+      status: m.status || 'pending',
+      donation_item: m.donationItem,
+      request_item: m.requestItem,
+      donor_name: m.donorName,
+      donor_email: m.donorEmail,
+      org_name: m.orgName,
+      org_contact_info: m.orgContactInfo,
+      donation_status: m.donationStatus,
+      request_status: m.requestStatus,
     }));
+  }
+
+  async acceptRequest(token: string, requestId: number): Promise<Match> {
+    // Get current user (donor)
+    const { data: { user } } = await supabase.auth.getUser(token);
+    if (!user) throw new Error('Unauthorized');
+    
+    // Get user details from MySQL
+    const users = await smartApi.getUserByEmail(user.email!);
+    if (!users || users.length === 0) {
+      throw new Error('User not found in database');
+    }
+    
+    const donorId = users[0].userId;
+    
+    // Create match via smartApi (donor accepts request to fulfill)
+    const match = await smartApi.acceptRequest({
+      donorId,
+      requestId,
+    });
+    
+    // Convert to UI format
+    return {
+      match_id: match.matchId,
+      donation_id: match.donationId,
+      request_id: match.requestId,
+      match_date: match.matchDate,
+      status: match.status || 'pending',
+    };
   }
 
   async createMatch(token: string, data: { donation_id: number; request_id?: number }): Promise<Match> {

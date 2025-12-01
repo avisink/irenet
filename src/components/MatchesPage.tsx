@@ -37,8 +37,8 @@ export function MatchesPage() {
     setLoading(true);
 
     try {
-      // Update match status to fulfilled
-      await api.updateMatchStatus(accessToken, matchId, 'fulfilled');
+      // Update match status to completed
+      await api.updateMatchStatus(accessToken, matchId, 'completed');
       setSuccess('Match marked as received! Item moved to Donations.');
       loadMatches();
     } catch (err: any) {
@@ -86,38 +86,43 @@ export function MatchesPage() {
               {matches.map((match) => (
                 <div
                   key={match.match_id}
-                  className="p-4 border rounded-lg bg-gradient-to-r from-green-50 to-blue-50"
+                  className={`p-4 border rounded-lg ${
+                    match.status === 'completed'
+                      ? 'bg-gradient-to-r from-green-100 to-emerald-100'
+                      : 'bg-gradient-to-r from-green-50 to-blue-50'
+                  }`}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Package className="size-5 text-green-600" />
                       <p className="font-medium">Match #{match.match_id}</p>
                     </div>
-                    <Badge className="bg-green-600">Matched</Badge>
+                    <Badge 
+                      className={
+                        match.status === 'completed'
+                          ? 'bg-emerald-600'
+                          : 'bg-orange-500'
+                      }
+                    >
+                      {match.status === 'completed' ? 'Completed' : 'Pending'}
+                    </Badge>
                   </div>
                   <div className="grid md:grid-cols-2 gap-4 mb-4">
-                    <div className="bg-white p-3 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">Your Request:</p>
-                      <p className="font-medium text-green-700">
-                        {match.requests_d9b92013?.item_name}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Category: {match.requests_d9b92013?.category}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Qty: {match.requests_d9b92013?.quantity}
-                      </p>
-                    </div>
+                    {match.request_item && (
+                      <div className="bg-white p-3 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Your Request:</p>
+                        <p className="font-medium text-green-700">
+                          {match.request_item}
+                        </p>
+                      </div>
+                    )}
                     <div className="bg-white p-3 rounded-lg">
                       <p className="text-xs text-gray-500 mb-1">Donation:</p>
                       <p className="font-medium text-blue-700">
-                        {match.donations_d9b92013?.item_name}
+                        {match.donation_item}
                       </p>
-                      <p className="text-sm text-gray-600">
-                        Category: {match.donations_d9b92013?.category}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Qty: {match.donations_d9b92013?.quantity}
+                      <p className="text-sm text-gray-600 mt-1">
+                        From: {match.donor_name}
                       </p>
                     </div>
                   </div>
@@ -125,14 +130,16 @@ export function MatchesPage() {
                     <p className="text-xs text-gray-500">
                       Matched on: {new Date(match.match_date).toLocaleDateString()}
                     </p>
-                    <Button
-                      onClick={() => handleMarkAsReceived(match.match_id)}
-                      disabled={loading}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="size-4 mr-2" />
-                      Mark as Received
-                    </Button>
+                    {match.status !== 'completed' && (
+                      <Button
+                        onClick={() => handleMarkAsReceived(match.match_id)}
+                        disabled={loading}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="size-4 mr-2" />
+                        Mark as Received
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

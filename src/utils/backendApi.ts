@@ -216,6 +216,40 @@ class BackendApiClient {
     return result.data;
   }
 
+  async createRequest(data: {
+    orgId: number;
+    itemName: string;
+    category: string;
+    quantity: number;
+    description?: string;
+    urgency?: string;
+  }) {
+    const response = await fetch(`${API_BASE_URL}/requests`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create request');
+    }
+    
+    const result = await response.json();
+    return result.data;
+  }
+
+  async deleteRequest(id: number) {
+    const response = await fetch(`${API_BASE_URL}/requests/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete request');
+    }
+  }
+
   // ============================================
   // MATCHES
   // ============================================
@@ -230,6 +264,25 @@ class BackendApiClient {
     
     if (!response.ok) {
       throw new Error('Failed to fetch matches');
+    }
+    
+    const result = await response.json();
+    return result.data;
+  }
+
+  async acceptRequest(data: {
+    donorId: number;
+    requestId: number;
+  }) {
+    const response = await fetch(`${API_BASE_URL}/matches/accept-request`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to accept request');
     }
     
     const result = await response.json();

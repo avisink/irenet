@@ -53,6 +53,25 @@ export function BrowseRequestsPage() {
     }
   }
 
+  async function handleAcceptRequest(requestId: number, itemName: string) {
+    if (!accessToken || !confirm(`Accept to fulfill this request for ${itemName}?`)) return;
+
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      // Create a match for this request (donor commits to fulfill it)
+      await api.acceptRequest(accessToken, requestId);
+      setSuccess('Request accepted! Check your Matches page to see delivery details.');
+      loadData();
+    } catch (err: any) {
+      setError(err.message || 'Failed to accept request');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       {error && (
@@ -115,37 +134,49 @@ export function BrowseRequestsPage() {
                     <Badge className="bg-blue-600 text-white">Open</Badge>
                   </div>
 
-                  {donations.some(
-                    (d) => d.status === 'available' && d.category === request.category
-                  ) ? (
-                    <div className="mt-4 pt-4 border-t">
-                      <p className="text-sm text-gray-600 mb-2">
-                        Match with one of your donations:
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-gray-600">
+                        Commit to fulfill this request
                       </p>
-                      <div className="flex flex-wrap gap-2">
-                        {donations
-                          .filter(
-                            (d) => d.status === 'available' && d.category === request.category
-                          )
-                          .map((d) => (
-                            <Button
-                              key={d.donation_id}
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleMatchDonation(d.donation_id, request.request_id)}
-                              className="border-green-600 text-green-700 hover:bg-green-50"
-                            >
-                              <Package className="size-3 mr-2" />
-                              {d.item_name} (Qty: {d.quantity})
-                            </Button>
-                          ))}
-                      </div>
+                      <Button
+                        onClick={() => handleAcceptRequest(request.request_id, request.item_name)}
+                        disabled={loading}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <CheckCircle className="size-4 mr-2" />
+                        Accept Request
+                      </Button>
                     </div>
-                  ) : (
-                    <p className="text-xs text-gray-400 mt-4 pt-4 border-t">
-                      You don't have any available donations in this category
-                    </p>
-                  )}
+
+                    {donations.some(
+                      (d) => d.status === 'available' && d.category === request.category
+                    ) && (
+                      <div className="mt-3">
+                        <p className="text-xs text-gray-500 mb-2">
+                          Or match with one of your existing donations:
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {donations
+                            .filter(
+                              (d) => d.status === 'available' && d.category === request.category
+                            )
+                            .map((d) => (
+                              <Button
+                                key={d.donation_id}
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleMatchDonation(d.donation_id, request.request_id)}
+                                className="border-green-600 text-green-700 hover:bg-green-50"
+                              >
+                                <Package className="size-3 mr-2" />
+                                {d.item_name} (Qty: {d.quantity})
+                              </Button>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
