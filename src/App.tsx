@@ -14,6 +14,7 @@ import { BrowseRequestsPage } from './components/BrowseRequestsPage';
 import { DonorMatchesPage } from './components/DonorMatchesPage';
 import { Toaster } from './components/ui/sonner';
 import { MyRequests } from './components/MyRequests';
+import { BrowseAvailableDonations } from './components/BrowseAvailableDonations';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -74,10 +75,10 @@ function AppContent() {
         return <MatchesPage />;
       }
       if (currentPage === 'donations') {
-        return <DonationsPage />;
+        return <BrowseAvailableDonations />;
       }
-      if (currentPage === 'requests' || currentPage === 'browse-donations') {
-        return <OrganizationDashboard />;
+      if (currentPage === 'completed-donations') {
+        return <DonationsPage />;
       }
     }
 
