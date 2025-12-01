@@ -8,7 +8,7 @@ ireNet is a comprehensive food waste reduction and redistribution platform that 
 ### Prerequisites
 - **Node.js** (v16 or higher)
 - **MySQL** server installed and running
-- **Git** for cloning
+- **Git** for cloningg
 
 ### Step 1: Clone the Repository
 ```bash
