@@ -33,6 +33,9 @@ CREATE TABLE donations (
     category VARCHAR(50),
     quantity INT,
     status ENUM('available', 'matched', 'delivered', 'cancelled'),
+    description TEXT,
+    location VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (donor_id) REFERENCES users(user_id)
 );
 
@@ -43,6 +46,9 @@ CREATE TABLE requests (
     category VARCHAR(50),
     quantity INT,
     status ENUM('open', 'matched', 'fulfilled', 'cancelled'),
+    description TEXT,
+    urgency ENUM('low', 'normal', 'high', 'urgent') DEFAULT 'normal',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (org_id) REFERENCES organizations(org_id)
 );
 

@@ -87,7 +87,7 @@ ireNet provides a lightweight, efficient platform that:
 **Registration & Onboarding**
 1. Visit landing page, view recent donations and platform stats
 2. Register as "Donor" with email, password, name, contact info
-3. Email verification (optional)
+3. Email verification (stretch feature)
 4. Access donor dashboard
 
 **Posting a Donation**
@@ -115,7 +115,7 @@ ireNet provides a lightweight, efficient platform that:
 
 **Registration & Verification**
 1. Register as "Organization" with organization details
-2. Provide: organization name, EIN/tax ID, address, mission statement
+2. Provide: organization name, EIN/tax ID, address, mission statement (optional till we figure out core logistics)
 3. Admin reviews and verifies organization
 4. Upon verification, access organization dashboard
 
@@ -130,16 +130,16 @@ ireNet provides a lightweight, efficient platform that:
 1. Navigate to "Post Request" from dashboard
 2. Specify needed items: category, quantity, urgency, description
 3. Request saved to MySQL
-4. Optional: Summary synced to Supabase for trending items
+4. Optional - stretch feature: Summary synced to Supabase for trending items
 5. Organizations can browse requests from other orgs to coordinate
 
 **Managing Matches**
 1. View "My Matches" showing all active matches
 2. See match status: Pending, Approved, Completed
-3. Communicate with donor (via platform messaging or contact info)
-4. Coordinate pickup/delivery logistics
+3. Communicate with donor (via contact info - not through ireNet, platform messaging would be a good stretch feature)
+4. Coordinate pickup/delivery logistics (outside ireNet for now)
 5. Mark match as completed after receiving items
-6. View match history and impact metrics
+6. View match history and impact metrics (impact metrics - stretch feature)
 
 **Analytics & Insights**
 1. View dashboard stats: items received, active matches, completed donations
