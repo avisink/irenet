@@ -90,11 +90,18 @@ export function DonorMatchesPage() {
                     <div className="bg-white p-3 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <Package className="size-4 text-green-600" />
-                        <p className="text-xs text-gray-500 font-medium">Your Donation:</p>
+                        <p className="text-xs text-gray-500 font-medium">
+                          {match.donation_item ? 'Your Donation:' : 'You Committed To:'}
+                        </p>
                       </div>
                       <p className="font-medium text-green-700">
-                        {match.donation_item}
+                        {match.donation_item || match.request_item || 'N/A'}
                       </p>
+                      {match.request_item && match.donation_item && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Requested: {match.request_item}
+                        </p>
+                      )}
                     </div>
 
                     <div className="bg-white p-3 rounded-lg">

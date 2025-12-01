@@ -487,13 +487,21 @@ class ApiClient {
       requestId,
     });
     
-    // Convert to UI format
+    // Convert to UI format with all match details
     return {
       match_id: match.matchId,
       donation_id: match.donationId,
       request_id: match.requestId,
       match_date: match.matchDate,
       status: match.status || 'pending',
+      donation_item: match.donationItem,
+      request_item: match.requestItem,
+      donor_name: match.donorName,
+      donor_email: match.donorEmail,
+      org_name: match.orgName,
+      org_contact_info: match.orgContactInfo,
+      donation_status: match.donationStatus,
+      request_status: match.requestStatus,
     };
   }
 
