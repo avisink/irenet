@@ -37,6 +37,9 @@ The database consists of five main entities:
 | `requests` | Requests made by organizations for specific needs |
 | `matches` | Records successful matches between donations and requests |
 
+<img width="624" height="580" alt="erd" src="https://github.com/user-attachments/assets/8c2b2e34-f601-4ec4-89b5-c9626c26b2d3" />
+
+
 ### Normalization Analysis
 
 #### First Normal Form (1NF) - Atomicity ✓
