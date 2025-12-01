@@ -328,7 +328,7 @@ export function OrganizationDashboard() {
                   className="p-4 border rounded-lg bg-green-50"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <p className="font-medium text-green-800">Match #{match.match_id}</p>
+                    <p className="font-medium text-green-800">Fulfilled Request</p>
                     <Badge className="bg-green-600">Matched</Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">

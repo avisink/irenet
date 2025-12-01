@@ -95,7 +95,7 @@ export function MatchesPage() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Package className="size-5 text-green-600" />
-                      <p className="font-medium">Match #{match.match_id}</p>
+                      <p className="font-medium">Incoming Donation</p>
                     </div>
                     <Badge 
                       className={

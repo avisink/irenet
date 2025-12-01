@@ -73,7 +73,7 @@ export function DonorMatchesPage() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <GitMerge className="size-5 text-green-600" />
-                      <p className="font-medium text-green-800">Match #{match.match_id}</p>
+                      <p className="font-medium text-green-800">Donation Match</p>
                     </div>
                     <Badge
                       className={

@@ -190,12 +190,24 @@ class ApiClient {
       const mysqlUser = users[0];
       console.log('✅ MySQL user found:', mysqlUser);
 
+      // For organization users, also fetch organization data
+      let organization = null;
+      if (mysqlUser.role === 'organization') {
+        try {
+          organization = await smartApi.getOrganizationByUserId(mysqlUser.userId);
+          console.log('✅ Organization data found:', organization);
+        } catch (orgError) {
+          console.warn('⚠️ Could not fetch organization data:', orgError);
+        }
+      }
+
       // Convert to UI format
       return {
         user_id: mysqlUser.userId,
         email: mysqlUser.email,
         name: mysqlUser.name,
         role: mysqlUser.role,
+        organization: organization,
       };
     } catch (error: any) {
       console.error('❌ Failed to get current user:', error);

@@ -34,8 +34,12 @@ export function OverviewPage({ onNavigate }: OverviewPageProps) {
         } else if (user?.role === 'organization') {
           const requests = await api.getMyRequests(accessToken);
           const matches = await api.getMyMatches(accessToken);
+          
+          // Count only completed matches as received donations
+          const completedDonations = matches.filter(match => match.status === 'completed').length;
+          
           setUserStats({
-            donations: 0,
+            donations: completedDonations,
             requests: requests.length,
             matches: matches.length,
           });
@@ -139,16 +143,13 @@ export function OverviewPage({ onNavigate }: OverviewPageProps) {
                     <p className="text-xs text-gray-500">Items to receive</p>
                   </CardContent>
                 </Card>
-                <Card 
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => onNavigate?.('donations')}
-                >
+                <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm">Donations Received</CardTitle>
                     <TrendingUp className="size-5 text-purple-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl">{userStats.matches}</div>
+                    <div className="text-3xl">{userStats.donations}</div>
                     <p className="text-xs text-gray-500">Items received</p>
                   </CardContent>
                 </Card>
@@ -206,7 +207,7 @@ export function OverviewPage({ onNavigate }: OverviewPageProps) {
                 </div>
                 <div 
                   className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                  onClick={() => onNavigate?.('browse-donations')}
+                  onClick={() => onNavigate?.('donations')}
                 >
                   <Package className="size-8 text-green-600 mb-2" />
                   <h4 className="font-medium mb-1">Browse Donations</h4>
