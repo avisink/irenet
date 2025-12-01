@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { supabase } = require('../config/supabase');
 
 // Convert database snake_case to frontend camelCase
 const convertToFrontendFormat = (dbData) => {

@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const db = require('./config/database');
+const { supabase } = require('./config/supabase');
 
 // Import routes
 const userRoutes = require('./routes/userRoutes');
@@ -42,33 +43,38 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Analytics endpoint - Get recent donations from MySQL
+// Analytics endpoint - Get recent donations from Supabase
 app.get('/api/analytics/recent-donations', async (req, res) => {
   try {
     const { limit = 10 } = req.query;
-    const query = `
-      SELECT d.*, u.name as donor_name, u.email as donor_email
-      FROM donations d
-      LEFT JOIN users u ON d.donor_id = u.user_id
-      ORDER BY d.created_at DESC
-      LIMIT ?
-    `;
-    const [rows] = await db.query(query, [parseInt(limit)]);
+    const { data, error } = await supabase
+      .from('recent_donations')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(parseInt(limit));
     
-    res.json({ success: true, data: rows || [] });
+    if (error) throw error;
+    
+    res.json({ success: true, data: data || [] });
   } catch (error) {
     console.error('Error fetching recent donations:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Activity logs endpoint - Get activity logs from MySQL
-// Note: This endpoint is kept for compatibility but may need a dedicated activity_logs table
+// Activity logs endpoint - Get activity logs from Supabase
 app.get('/api/analytics/activity-logs', async (req, res) => {
   try {
     const { limit = 20 } = req.query;
-    // For now, return empty array or implement activity logging in MySQL
-    res.json({ success: true, data: [] });
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .limit(parseInt(limit));
+    
+    if (error) throw error;
+    
+    res.json({ success: true, data: data || [] });
   } catch (error) {
     console.error('Error fetching activity logs:', error);
     res.status(500).json({ success: false, error: error.message });
