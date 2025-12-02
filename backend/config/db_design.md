@@ -40,6 +40,9 @@ The database consists of five main entities:
 <img width="624" height="580" alt="erd" src="https://github.com/user-attachments/assets/8c2b2e34-f601-4ec4-89b5-c9626c26b2d3" />
 
 
+<img width="768" height="457" alt="Screenshot 2025-12-02 at 11 32 39 AM" src="https://github.com/user-attachments/assets/434027a6-7e3b-42ed-a5bb-96d56851735c" />
+
+
 ### Normalization Analysis
 
 #### First Normal Form (1NF) - Atomicity ✓
