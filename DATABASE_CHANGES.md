@@ -1297,7 +1297,144 @@ Or if MySQL fails:
 
 ---
 
-## 15. Summary of Changes
+## 15. Match Quantity Fields Enhancement
+
+**Date:** December 2024  
+**Purpose:** Add quantity information to match queries to enable impact calculation (sum of quantities)
+
+### 15.1 Backend Changes - Match Controller
+
+**File:** `backend/controllers/matchController.js`
+
+#### Changes Made:
+1. **Updated `convertToFrontendFormat` function** to include quantity fields:
+   - Added `donationQuantity: dbData.donation_quantity ?? null`
+   - Added `requestQuantity: dbData.request_quantity ?? null`
+   - Ensures quantities are always included in match responses (null if not applicable)
+
+2. **Updated all SQL queries** in match controller to include quantity fields:
+   - `exports.getAll`: Added `d.quantity as donation_quantity` and `r.quantity as request_quantity` to SELECT clause
+   - `exports.getById`: Added quantity fields to SELECT clause
+   - `exports.acceptRequest`: Added quantity fields to SELECT clause in final query
+   - `exports.create`: Added quantity fields to SELECT clause in final query
+   - `exports.update`: Added quantity fields to SELECT clause in final query
+
+#### SQL Query Pattern:
+```sql
+SELECT m.*, 
+       d.item_name as donation_item, 
+       d.status as donation_status, 
+       d.quantity as donation_quantity,  -- NEW
+       r.item_name as request_item, 
+       r.status as request_status, 
+       r.quantity as request_quantity,   -- NEW
+       u.name as donor_name, 
+       u.email as donor_email,
+       o.org_name, 
+       o.contact_info as org_contact_info
+FROM matches m
+LEFT JOIN donations d ON m.donation_id = d.donation_id
+LEFT JOIN requests r ON m.request_id = r.request_id
+LEFT JOIN users u ON m.donor_id = u.user_id
+JOIN organizations o ON m.org_id = o.org_id
+```
+
+#### Impact:
+- Matches now include quantity information from both donations and requests
+- Enables frontend to calculate total impact (sum of quantities)
+- Supports both donation-initiated matches (has donation_quantity) and request-initiated matches (has request_quantity)
+
+### 15.2 Frontend Changes - API Client
+
+**File:** `ui/src/utils/api.ts`
+
+#### Changes Made:
+1. **Updated `Match` interface** to include quantity fields:
+   ```typescript
+   export interface Match {
+     // ... existing fields
+     donation_quantity?: number;
+     request_quantity?: number;
+   }
+   ```
+
+2. **Updated `getMyMatches` method** to include quantity fields in conversion:
+   - Maps `m.donationQuantity` → `donation_quantity`
+   - Maps `m.requestQuantity` → `request_quantity`
+
+3. **Updated all match conversion methods** to preserve quantity fields:
+   - `acceptRequest`: Includes quantity fields in returned match
+   - `createMatch`: Includes quantity fields in returned match
+   - `updateMatchStatus`: Includes quantity fields in returned match
+
+### 15.3 Frontend Changes - Dashboard Impact Calculation
+
+**File:** `ui/src/components/OverviewPage.tsx`
+
+#### Changes Made:
+1. **Updated impact calculation for donors**:
+   - Changed from counting matches to summing quantities
+   - Uses `donation_quantity` if available, falls back to `request_quantity`
+   - Calculates: `sum of all quantities from matches`
+
+2. **Updated "Donations Received" for organizations**:
+   - Changed from counting completed matches to summing quantities
+   - Only includes completed matches
+   - Uses `donation_quantity` if available, falls back to `request_quantity`
+
+3. **Added debug logging** to track quantity values during calculation
+
+#### Calculation Logic:
+```typescript
+// For donors - Impact
+const impact = matches.reduce((sum, match) => {
+  const donationQty = match.donation_quantity != null ? Number(match.donation_quantity) : null;
+  const requestQty = match.request_quantity != null ? Number(match.request_quantity) : null;
+  const quantity = donationQty ?? requestQty ?? 0;
+  return sum + quantity;
+}, 0);
+
+// For organizations - Donations Received
+const completedMatches = matches.filter(match => match.status === 'completed');
+const donationsReceived = completedMatches.reduce((sum, match) => {
+  const quantity = match.donation_quantity ?? match.request_quantity ?? 0;
+  return sum + quantity;
+}, 0);
+```
+
+### 15.4 Frontend Changes - Organization Name Display Fix
+
+**Files:** 
+- `ui/src/utils/api.ts`
+- `ui/src/components/OverviewPage.tsx`
+- `ui/src/components/DashboardLayout.tsx`
+
+#### Changes Made:
+1. **Updated `Organization` interface** to use camelCase (matching backend):
+   - Changed `org_name` → `orgName`
+   - Changed `org_id` → `orgId`
+   - Changed `user_id` → `userId`
+   - Changed `contact_info` → `contactInfo`
+
+2. **Updated welcome message** in `OverviewPage.tsx`:
+   - Changed `user.organization?.org_name` → `user.organization?.orgName`
+   - Added fallback: `(user.organization?.orgName || user?.name)`
+
+3. **Updated organization name display** in `DashboardLayout.tsx`:
+   - Changed `user.organization?.org_name` → `user.organization?.orgName`
+   - Added fallback: `(user.organization?.orgName || user?.name)`
+
+#### Impact:
+- Organization name now displays correctly in welcome message and header
+- Falls back to user name if organization data isn't loaded
+- Consistent camelCase naming throughout frontend
+
+### 15.5 Database Schema
+**No schema changes required** - Uses existing `quantity` columns from `donations` and `requests` tables via JOINs.
+
+---
+
+## 16. Summary of Changes
 
 ### Database
 - ✅ 3 new columns added to `matches` table
@@ -1312,6 +1449,8 @@ Or if MySQL fails:
 - ✅ Updated all match queries to use LEFT JOIN
 - ✅ NULL-safe donation/request updates
 - ✅ Returns full match details with org contact info
+- ✅ Added quantity fields (donation_quantity, request_quantity) to all match queries
+- ✅ Enhanced match conversion to include quantity information
 
 ### Frontend
 - ✅ 3 new files (backendApi.ts, smartApi.ts, BrowseAvailableDonations.tsx)
@@ -1320,6 +1459,11 @@ Or if MySQL fails:
 - ✅ Added org contact info display for donors
 - ✅ Added accept request functionality
 - ✅ Filter fulfilled requests from My Requests
+- ✅ Updated Match interface to include quantity fields
+- ✅ Implemented impact calculation (sum of quantities) for donors
+- ✅ Implemented donations received calculation (sum of quantities) for organizations
+- ✅ Fixed organization name display (camelCase consistency)
+- ✅ Added fallback for organization name display
 
 ### Data Operations
 - ✅ All reads: MySQL first, Supabase fallback
@@ -1331,11 +1475,12 @@ Or if MySQL fails:
 
 ## End of Documentation
 
-**Total Files Modified:** 10  
+**Total Files Modified:** 13  
 **Total New Files:** 3  
-**Database Schema Changes:** 3 columns added  
+**Database Schema Changes:** 3 columns added (no new changes - uses existing quantity columns)  
 **New API Endpoints:** 1 (accept-request)  
-**Lines of Code Changed:** ~2000+  
+**Lines of Code Changed:** ~2200+  
+**Latest Update:** Added quantity fields to match queries for impact calculation  
 
 This integration maintains assignment compliance (MySQL 3NF + NoSQL redundancy) while providing a fully functional dual-database system with automatic synchronization and intelligent fallback.
 

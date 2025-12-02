@@ -54,7 +54,7 @@ export function DashboardLayout({ children, currentPage, onNavigate }: Dashboard
               <h1 className="text-2xl text-green-800">ireNet</h1>
               <p className="text-sm text-gray-500">
                 {user?.role === 'organization'
-                  ? user.organization?.org_name
+                  ? (user.organization?.orgName || user?.name)
                   : user?.name}
               </p>
             </div>

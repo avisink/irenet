@@ -29,10 +29,10 @@ export interface User {
 }
 
 export interface Organization {
-  org_id: number;
-  user_id: number;
-  org_name: string;
-  contact_info: string;
+  orgId: number;
+  userId: number;
+  orgName: string;
+  contactInfo: string;
 }
 
 export interface Donation {
@@ -70,6 +70,8 @@ export interface Match {
   org_contact_info?: string;
   donation_status?: string;
   request_status?: string;
+  donation_quantity?: number;
+  request_quantity?: number;
   donations_d9b92013?: Donation;
   requests_d9b92013?: Request & { organizations_d9b92013?: { org_name: string } };
 }
@@ -450,22 +452,39 @@ class ApiClient {
     
     const matches = await smartApi.getMatches(filters);
     
+    // Debug: Log raw match data from backend
+    console.log('🔍 Raw matches from backend:', matches);
+    
     // Convert to UI format (snake_case) with all details
-    return matches.map((m: any) => ({
-      match_id: m.matchId,
-      donation_id: m.donationId,
-      request_id: m.requestId,
-      match_date: m.matchDate,
-      status: m.status || 'pending',
-      donation_item: m.donationItem,
-      request_item: m.requestItem,
-      donor_name: m.donorName,
-      donor_email: m.donorEmail,
-      org_name: m.orgName,
-      org_contact_info: m.orgContactInfo,
-      donation_status: m.donationStatus,
-      request_status: m.requestStatus,
-    }));
+    const convertedMatches = matches.map((m: any) => {
+      const converted = {
+        match_id: m.matchId,
+        donation_id: m.donationId,
+        request_id: m.requestId,
+        match_date: m.matchDate,
+        status: m.status || 'pending',
+        donation_item: m.donationItem,
+        request_item: m.requestItem,
+        donor_name: m.donorName,
+        donor_email: m.donorEmail,
+        org_name: m.orgName,
+        org_contact_info: m.orgContactInfo,
+        donation_status: m.donationStatus,
+        request_status: m.requestStatus,
+        donation_quantity: m.donationQuantity ?? null,
+        request_quantity: m.requestQuantity ?? null,
+      };
+      console.log('🔄 Converted match:', {
+        match_id: converted.match_id,
+        donationQuantity: m.donationQuantity,
+        requestQuantity: m.requestQuantity,
+        converted_donation_quantity: converted.donation_quantity,
+        converted_request_quantity: converted.request_quantity,
+      });
+      return converted;
+    });
+    
+    return convertedMatches;
   }
 
   async acceptRequest(token: string, requestId: number): Promise<Match> {
@@ -502,6 +521,8 @@ class ApiClient {
       org_contact_info: match.orgContactInfo,
       donation_status: match.donationStatus,
       request_status: match.requestStatus,
+      donation_quantity: match.donationQuantity,
+      request_quantity: match.requestQuantity,
     };
   }
 
@@ -538,6 +559,8 @@ class ApiClient {
       request_id: match.requestId,
       match_date: match.matchDate,
       status: match.status || 'pending',
+      donation_quantity: match.donationQuantity,
+      request_quantity: match.requestQuantity,
     };
   }
 
@@ -551,6 +574,8 @@ class ApiClient {
       request_id: match.requestId,
       match_date: match.matchDate,
       status: match.status,
+      donation_quantity: match.donationQuantity,
+      request_quantity: match.requestQuantity,
     };
   }
 

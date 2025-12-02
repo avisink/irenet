@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { useAuth } from '../context/AuthContext';
 import { api, Stats } from '../utils/api';
@@ -11,44 +11,96 @@ interface OverviewPageProps {
 export function OverviewPage({ onNavigate }: OverviewPageProps) {
   const { user, accessToken } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
-  const [userStats, setUserStats] = useState({ donations: 0, requests: 0, matches: 0 });
+  const [userStats, setUserStats] = useState({ donations: 0, requests: 0, matches: 0, impact: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadStats();
-  }, []);
-
-  async function loadStats() {
+  const loadStats = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const globalStats = await api.getStats();
-      setStats(globalStats);
+      // Try to get global stats, but don't fail if it doesn't work
+      try {
+        const globalStats = await api.getStats();
+        setStats(globalStats);
+      } catch (statsErr) {
+        console.warn('Failed to load global stats (non-critical):', statsErr);
+        // Continue even if global stats fail
+      }
 
-      if (accessToken) {
-        if (user?.role === 'donor') {
+      if (accessToken && user) {
+        if (user.role === 'donor') {
           const donations = await api.getMyDonations(accessToken);
           const matches = await api.getMyMatches(accessToken);
+          
+          // Debug: Log matches to see what data we're getting
+          console.log('🔍 Donor matches data:', matches);
+          matches.forEach((match, index) => {
+            console.log(`Match ${index}:`, {
+              match_id: match.match_id,
+              donation_id: match.donation_id,
+              request_id: match.request_id,
+              donation_quantity: match.donation_quantity,
+              request_quantity: match.request_quantity,
+              status: match.status,
+            });
+          });
+          
+          // Calculate impact: sum of quantities from all matches
+          // Use donation_quantity if available, otherwise fall back to request_quantity
+          const impact = matches.reduce((sum, match) => {
+            // Handle null, undefined, or 0 values properly
+            const donationQty = match.donation_quantity != null ? Number(match.donation_quantity) : null;
+            const requestQty = match.request_quantity != null ? Number(match.request_quantity) : null;
+            const quantity = donationQty ?? requestQty ?? 0;
+            console.log(`Calculating impact: match ${match.match_id}, donation_qty=${match.donation_quantity} (${typeof match.donation_quantity}), request_qty=${match.request_quantity} (${typeof match.request_quantity}), using=${quantity}`);
+            return sum + quantity;
+          }, 0);
+          
+          console.log('📊 Calculated impact:', impact);
+          
           setUserStats({
             donations: donations.length,
             requests: 0,
             matches: matches.length,
+            impact: impact,
           });
-        } else if (user?.role === 'organization') {
+        } else if (user.role === 'organization') {
           const requests = await api.getMyRequests(accessToken);
           const matches = await api.getMyMatches(accessToken);
           
-          // Count only completed matches as received donations
-          const completedDonations = matches.filter(match => match.status === 'completed').length;
+          // Sum quantities from completed matches (items received)
+          const completedMatches = matches.filter(match => match.status === 'completed');
+          const donationsReceived = completedMatches.reduce((sum, match) => {
+            const quantity = match.donation_quantity || match.request_quantity || 0;
+            return sum + quantity;
+          }, 0);
           
           setUserStats({
-            donations: completedDonations,
+            donations: donationsReceived,
             requests: requests.length,
             matches: matches.length,
           });
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load stats:', err);
+      setError(err.message || 'Failed to load statistics');
+    } finally {
+      setLoading(false);
     }
-  }
+  }, [user, accessToken]);
+
+  useEffect(() => {
+    // Only load stats when user and accessToken are available
+    if (user && accessToken) {
+      loadStats();
+    } else if (user === null && !accessToken) {
+      // User is logged out, reset stats
+      setUserStats({ donations: 0, requests: 0, matches: 0, impact: 0 });
+      setLoading(false);
+    }
+  }, [user, accessToken, loadStats]);
 
   return (
     <div className="space-y-6">
@@ -56,7 +108,7 @@ export function OverviewPage({ onNavigate }: OverviewPageProps) {
       <Card className="bg-gradient-to-r from-green-600 to-blue-600 text-white">
         <CardContent className="p-8">
           <h2 className="text-3xl mb-2">
-            Welcome back, {user?.role === 'organization' ? user.organization?.org_name : user?.name}!
+            Welcome back, {user?.role === 'organization' ? (user.organization?.orgName || user?.name) : user?.name}!
           </h2>
           <p className="text-xl opacity-90">
             {user?.role === 'donor'
@@ -68,10 +120,45 @@ export function OverviewPage({ onNavigate }: OverviewPageProps) {
         </CardContent>
       </Card>
 
+      {/* Error Message */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <p className="text-red-600 text-sm">{error}</p>
+            <button
+              onClick={loadStats}
+              className="mt-2 text-sm text-red-700 underline hover:text-red-900"
+            >
+              Retry
+            </button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+              <p className="text-sm text-gray-600">Loading statistics...</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Personal Stats */}
-      {user?.role !== 'admin' && (
+      {user?.role !== 'admin' && !loading && (
         <div>
-          <h3 className="text-xl mb-4">Your Activity</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl">Your Activity</h3>
+            <button
+              onClick={loadStats}
+              className="text-sm text-green-600 hover:text-green-700 underline"
+            >
+              Refresh
+            </button>
+          </div>
           <div className="grid md:grid-cols-3 gap-4">
             {user?.role === 'donor' && (
               <>
@@ -107,8 +194,8 @@ export function OverviewPage({ onNavigate }: OverviewPageProps) {
                     <TrendingUp className="size-5 text-purple-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl">{userStats.matches}</div>
-                    <p className="text-xs text-gray-500">People helped</p>
+                    <div className="text-3xl">{userStats.impact}</div>
+                    <p className="text-xs text-gray-500">Items donated</p>
                   </CardContent>
                 </Card>
               </>

@@ -5,7 +5,24 @@ const { supabase } = require('../config/supabase');
 const convertToFrontendFormat = (dbData) => {
   if (!dbData) return null;
   
-  return {
+  // Debug: Log the raw database data
+  console.log('🔍 Raw DB data for match:', {
+    match_id: dbData.match_id,
+    donation_quantity: dbData.donation_quantity,
+    request_quantity: dbData.request_quantity,
+    donation_quantity_type: typeof dbData.donation_quantity,
+    request_quantity_type: typeof dbData.request_quantity,
+  });
+  
+  // Explicitly handle quantity fields - ensure they're always included
+  const donationQty = dbData.donation_quantity !== undefined && dbData.donation_quantity !== null 
+    ? Number(dbData.donation_quantity) 
+    : null;
+  const requestQty = dbData.request_quantity !== undefined && dbData.request_quantity !== null 
+    ? Number(dbData.request_quantity) 
+    : null;
+  
+  const converted = {
     matchId: dbData.match_id,
     donationId: dbData.donation_id,
     requestId: dbData.request_id,
@@ -21,7 +38,18 @@ const convertToFrontendFormat = (dbData) => {
     orgContactInfo: dbData.org_contact_info,
     donationStatus: dbData.donation_status,
     requestStatus: dbData.request_status,
+    donationQuantity: donationQty,
+    requestQuantity: requestQty,
   };
+  
+  // Debug: Log the converted data
+  console.log('✅ Converted match data:', {
+    matchId: converted.matchId,
+    donationQuantity: converted.donationQuantity,
+    requestQuantity: converted.requestQuantity,
+  });
+  
+  return converted;
 };
 
 // Convert frontend camelCase to database snake_case
@@ -59,8 +87,8 @@ exports.getAll = async (req, res) => {
     const { donorId, orgId } = req.query;
 
     let query = `
-      SELECT m.*, d.item_name as donation_item, d.status as donation_status,
-             r.item_name as request_item, r.status as request_status,
+      SELECT m.*, d.item_name as donation_item, d.status as donation_status, d.quantity as donation_quantity,
+             r.item_name as request_item, r.status as request_status, r.quantity as request_quantity,
              u.name as donor_name, u.email as donor_email,
              o.org_name, o.contact_info as org_contact_info
       FROM matches m
@@ -90,7 +118,30 @@ exports.getAll = async (req, res) => {
     query += ' ORDER BY m.match_date DESC';
     
     const [rows] = await db.query(query, params);
+    
+    // Debug: Log first row to see what we're getting from DB
+    if (rows.length > 0) {
+      console.log('🔍 First row from DB query:', {
+        match_id: rows[0].match_id,
+        donation_quantity: rows[0].donation_quantity,
+        request_quantity: rows[0].request_quantity,
+        has_donation_quantity: 'donation_quantity' in rows[0],
+        has_request_quantity: 'request_quantity' in rows[0],
+      });
+    }
+    
     const formattedData = rows.map(convertToFrontendFormat);
+    
+    // Debug: Log first converted item
+    if (formattedData.length > 0) {
+      console.log('✅ First converted item:', {
+        matchId: formattedData[0].matchId,
+        donationQuantity: formattedData[0].donationQuantity,
+        requestQuantity: formattedData[0].requestQuantity,
+        has_donationQuantity: 'donationQuantity' in formattedData[0],
+        has_requestQuantity: 'requestQuantity' in formattedData[0],
+      });
+    }
     
     res.json({ success: true, data: formattedData });
   } catch (error) {
@@ -104,8 +155,8 @@ exports.getById = async (req, res) => {
   try {
     const { id } = req.params;
     const [rows] = await db.query(
-      `SELECT m.*, d.item_name as donation_item, d.status as donation_status,
-              r.item_name as request_item, r.status as request_status,
+      `SELECT m.*, d.item_name as donation_item, d.status as donation_status, d.quantity as donation_quantity,
+              r.item_name as request_item, r.status as request_status, r.quantity as request_quantity,
               u.name as donor_name, u.email as donor_email,
               o.org_name, o.contact_info as org_contact_info
        FROM matches m
@@ -199,8 +250,8 @@ exports.acceptRequest = async (req, res) => {
       
       // Fetch complete match data
       const [rows] = await db.query(
-        `SELECT m.*, d.item_name as donation_item, d.status as donation_status,
-                r.item_name as request_item, r.status as request_status,
+        `SELECT m.*, d.item_name as donation_item, d.status as donation_status, d.quantity as donation_quantity,
+                r.item_name as request_item, r.status as request_status, r.quantity as request_quantity,
                 u.name as donor_name, u.email as donor_email,
                 o.org_name, o.contact_info as org_contact_info
          FROM matches m
@@ -304,8 +355,8 @@ exports.create = async (req, res) => {
       
       // Fetch complete match data
       const [rows] = await db.query(
-        `SELECT m.*, d.item_name as donation_item, d.donor_id, d.status as donation_status,
-                r.item_name as request_item, r.status as request_status,
+        `SELECT m.*, d.item_name as donation_item, d.donor_id, d.status as donation_status, d.quantity as donation_quantity,
+                r.item_name as request_item, r.status as request_status, r.quantity as request_quantity,
                 u.name as donor_name, u.email as donor_email,
                 o.org_name, o.contact_info as org_contact_info
          FROM matches m
@@ -435,8 +486,8 @@ exports.update = async (req, res) => {
       });
       
       const [rows] = await db.query(
-        `SELECT m.*, d.item_name as donation_item, d.status as donation_status,
-                r.item_name as request_item, r.status as request_status,
+        `SELECT m.*, d.item_name as donation_item, d.status as donation_status, d.quantity as donation_quantity,
+                r.item_name as request_item, r.status as request_status, r.quantity as request_quantity,
                 u.name as donor_name, u.email as donor_email,
                 o.org_name, o.contact_info as org_contact_info
          FROM matches m
